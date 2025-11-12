@@ -105,11 +105,19 @@ class AdaRRT():
             goal on success. On failure, returns None.
         """
         for k in range(self.max_iter):
-            # FILL in your code here
+            sample = self._get_random_sample()
+            # Question 5
+            # if np.random.random() < 0.2:
+            #     sample = self._get_random_sample_near_goal()
+            # else:
+            #     sample = self._get_random_sample()
+            nearest_neighbor = self._get_nearest_neighbor(sample)
+            new_node = self._extend_sample(sample, nearest_neighbor)
 
             if new_node and self._check_for_completion(new_node):
-                # FILL in your code here
-
+                self.goal.parent = new_node
+                new_node.children.append(self.goal)
+                path = self._trace_path_from_start()
                 return path
 
         print("Failed to find path from {0} to {1} after {2} iterations!".format(
@@ -122,7 +130,26 @@ class AdaRRT():
         :returns: A vector representing a randomly sampled point in the search
             space.
         """
-        # FILL in your code here
+        sample = np.random.uniform(
+            low=self.joint_lower_limits,
+            high=self.joint_upper_limits
+        )
+        return sample
+
+    # Question 5
+    def _get_random_sample_near_goal(self):
+        """
+        Samples near the goal state within a distance of 0.05 along each axis.
+    
+        :returns: A vector representing a randomly sampled point near the goal.
+        """
+        sample = self.goal.state + np.random.uniform(
+            low=-0.05,
+            high=0.05,
+            size=self.goal.state.shape
+        )
+        sample = np.clip(sample, self.joint_lower_limits, self.joint_upper_limits)
+        return sample
 
     def _get_nearest_neighbor(self, sample):
         """
@@ -132,7 +159,16 @@ class AdaRRT():
         :param sample: The target point to find the closest neighbor to.
         :returns: A Node object for the closest neighbor.
         """
-        # FILL in your code here
+        min_distance = float('inf')
+        nearest_node = None
+
+        for node in self.start:
+            distance = np.linalg.norm(node.state - sample)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_node = node
+
+        return nearest_node
 
     def _extend_sample(self, sample, neighbor):
         """
@@ -145,7 +181,20 @@ class AdaRRT():
         :param neighbor: closest existing node to sample
         :returns: The new Node object. On failure (collision), returns None.
         """
-        # FILL in your code here
+        direction = sample - neighbor.state
+        distance = np.linalg.norm(direction)
+
+        if distance == 0:
+            return None
+
+        direction = direction / distance
+        new_state = neighbor.state + direction * min(self.step_size, distance)
+
+        if self._check_for_collision(new_state):
+            return None
+
+        new_node = neighbor.add_child(new_state)
+        return new_node
 
     def _check_for_completion(self, node):
         """
@@ -154,7 +203,8 @@ class AdaRRT():
         :param node: The target Node
         :returns: Boolean indicating node is close enough for completion.
         """
-        # FILL in your code here
+        distance = np.linalg.norm(node.state - self.goal.state)
+        return distance <= self.goal_precision
 
     def _trace_path_from_start(self, node=None):
         """
@@ -165,7 +215,17 @@ class AdaRRT():
         :returns: A list of states (not Nodes!) beginning at the start state and
             ending at the goal state.
         """
-        # FILL in your code here
+        if node is None:
+            node = self.goal
+
+        path = []
+        current = node
+        while current is not None:
+            path.append(current.state)
+            current = current.parent
+
+        path.reverse()
+        return path
 
     def _check_for_collision(self, sample):
         """
@@ -193,6 +253,8 @@ def main(is_sim):
     goalConfig = [-1.72, 4.44, 2.02, -2.04, 2.66, 1.39]
     delta = 0.25
     eps = 1.0
+    # Question 5
+    # eps = 0.2
 
     if is_sim:
         ada.set_positions(goalConfig)
@@ -248,6 +310,9 @@ def main(is_sim):
         t0 = time.clock()
         traj = ada.compute_joint_space_path(
             ada.get_arm_state_space(), waypoints)
+        # Question 4
+        # traj = ada.compute_smooth_joint_space_path(
+        #     ada.get_arm_state_space(), waypoints)
         t = time.clock() - t0
         print(str(t) + "seconds elapsed")
         raw_input('Press ENTER to execute trajectory and exit')

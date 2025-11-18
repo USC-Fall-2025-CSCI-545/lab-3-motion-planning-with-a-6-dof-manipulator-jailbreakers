@@ -105,12 +105,12 @@ class AdaRRT():
             goal on success. On failure, returns None.
         """
         for k in range(self.max_iter):
-            sample = self._get_random_sample()
+            # sample = self._get_random_sample()
             # Question 5
-            # if np.random.random() < 0.2:
-            #     sample = self._get_random_sample_near_goal()
-            # else:
-            #     sample = self._get_random_sample()
+            if np.random.random() < 0.2:
+                sample = self._get_random_sample_near_goal()
+            else:
+                sample = self._get_random_sample()
             nearest_neighbor = self._get_nearest_neighbor(sample)
             new_node = self._extend_sample(sample, nearest_neighbor)
 
@@ -252,9 +252,9 @@ def main(is_sim):
     armHome = [-1.5, 3.22, 1.23, -2.19, 1.8, 1.2]
     goalConfig = [-1.72, 4.44, 2.02, -2.04, 2.66, 1.39]
     delta = 0.25
-    eps = 1.0
+    #eps = 1.0
     # Question 5
-    # eps = 0.2
+    eps = 0.2
 
     if is_sim:
         ada.set_positions(goalConfig)
@@ -308,11 +308,11 @@ def main(is_sim):
             waypoints.append((0.0 + i, waypoint))
 
         t0 = time.clock()
-        traj = ada.compute_joint_space_path(
-            ada.get_arm_state_space(), waypoints)
-        # Question 4
-        # traj = ada.compute_smooth_joint_space_path(
+        # traj = ada.compute_joint_space_path(
         #     ada.get_arm_state_space(), waypoints)
+        # Question 4
+        traj = ada.compute_smooth_joint_space_path(
+            ada.get_arm_state_space(), waypoints)
         t = time.clock() - t0
         print(str(t) + "seconds elapsed")
         raw_input('Press ENTER to execute trajectory and exit')
